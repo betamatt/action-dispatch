@@ -43,6 +43,11 @@ type RunnerOpts struct {
 	// JITConfig is the base64-encoded JIT runner configuration from GitHub.
 	// The runner binary uses this instead of a registration token.
 	JITConfig string
+
+	// RegistryToken is a short-lived token for authenticating to the container
+	// registry (e.g. GHCR). For GitHub Apps this is the installation access token.
+	// If empty, the startup script skips docker login (public images only).
+	RegistryToken string
 }
 
 // Provider is the cloud-agnostic interface for managing runner instances.

@@ -69,6 +69,19 @@ func (r *Registrar) GenerateOrgJITConfig(ctx context.Context, org, name string, 
 	}, nil
 }
 
+// CreateInstallationToken mints a short-lived installation access token.
+// This token authenticates both GitHub API calls and GHCR docker pulls
+// (via `docker login ghcr.io -u x-access-token -p <token>`).
+func (r *Registrar) CreateInstallationToken(ctx context.Context, installationID int64) (string, error) {
+	token, resp, err := r.client.Apps.CreateInstallationToken(ctx, installationID, nil)
+	if err != nil {
+		return "", fmt.Errorf("creating installation token: %w", err)
+	}
+	defer resp.Body.Close()
+
+	return token.GetToken(), nil
+}
+
 // RemoveRunner deletes a runner registration from GitHub.
 func (r *Registrar) RemoveRunner(ctx context.Context, owner, repo string, runnerID int64) error {
 	resp, err := r.client.Actions.RemoveRunner(ctx, owner, repo, runnerID)

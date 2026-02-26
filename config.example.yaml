@@ -1,5 +1,6 @@
 github:
   app_id: 12345
+  installation_id: 67890
   private_key_path: /etc/action-dispatch/app.pem
   webhook_secret: change-me
 

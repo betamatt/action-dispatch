@@ -14,6 +14,7 @@ type Config struct {
 
 type GitHubConfig struct {
 	AppID          int64  `yaml:"app_id"`
+	InstallationID int64  `yaml:"installation_id"`
 	PrivateKeyPath string `yaml:"private_key_path"`
 	WebhookSecret  string `yaml:"webhook_secret"`
 }
@@ -65,6 +66,9 @@ func Load(path string) (*Config, error) {
 func (c *Config) validate() error {
 	if c.GitHub.AppID == 0 {
 		return fmt.Errorf("github.app_id is required")
+	}
+	if c.GitHub.InstallationID == 0 {
+		return fmt.Errorf("github.installation_id is required")
 	}
 	if c.GitHub.PrivateKeyPath == "" {
 		return fmt.Errorf("github.private_key_path is required")

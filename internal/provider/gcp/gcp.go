@@ -303,14 +303,25 @@ func decodeResponse(resp *http.Response, v any) error {
 // the runner Docker image with the JIT config.
 func startupScript(image string, opts provider.RunnerOpts) string {
 	// COS comes with Docker pre-installed. The script:
-	// 1. Pulls the runner image
-	// 2. Runs it with the JIT config as an env var
-	// 3. Shuts down the VM when the container exits
+	// 1. Authenticates to GHCR if a registry token is provided
+	// 2. Pulls the runner image
+	// 3. Runs it with the JIT config as an env var
+	// 4. Shuts down the VM when the container exits
 	//
 	// The Docker image is expected to:
 	// - Have the GitHub Actions runner installed
 	// - Read ACTIONS_RUNNER_INPUT_JITCONFIG and call: ./run.sh --jitconfig "$ACTIONS_RUNNER_INPUT_JITCONFIG"
 	// - Exit when the job completes (JIT runners are ephemeral by nature)
+
+	var loginBlock string
+	if opts.RegistryToken != "" {
+		// GitHub App installation tokens authenticate to GHCR as "x-access-token".
+		loginBlock = fmt.Sprintf(`
+# Authenticate to GHCR using the GitHub App installation token.
+echo '%s' | docker login ghcr.io -u x-access-token --password-stdin
+`, opts.RegistryToken)
+	}
+
 	return fmt.Sprintf(`#!/bin/bash
 set -euo pipefail
 
@@ -318,7 +329,7 @@ set -euo pipefail
 exec > >(tee /dev/ttyS0) 2>&1
 
 echo "action-dispatch: starting runner %s for pool %s"
-
+%s
 # Pull the runner image. Retry a few times since COS networking may take a moment.
 for i in 1 2 3 4 5; do
     if docker pull %s; then
@@ -337,7 +348,7 @@ docker run --rm \
 
 echo "action-dispatch: runner exited, shutting down VM"
 shutdown -h now
-`, opts.Name, opts.Pool, image, opts.JITConfig, opts.Name, image)
+`, opts.Name, opts.Pool, loginBlock, image, opts.JITConfig, opts.Name, image)
 }
 
 func mapGCEStatus(status string) provider.RunnerStatus {
