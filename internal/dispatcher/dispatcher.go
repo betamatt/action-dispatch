@@ -76,6 +76,14 @@ func (d *Dispatcher) HandleQueued(ctx context.Context, event *JobEvent) error {
 		return fmt.Errorf("generating JIT config: %w", err)
 	}
 
+	// Mint an installation token for GHCR auth. The runner VM uses this to
+	// pull private Docker images from ghcr.io.
+	registryToken, err := d.registrar.CreateInstallationToken(ctx, d.cfg.GitHub.InstallationID)
+	if err != nil {
+		d.logger.Warn("failed to create registry token, runner will only be able to pull public images",
+			"error", err)
+	}
+
 	d.logger.Info("provisioning runner",
 		"name", name,
 		"pool", pool.Name,
@@ -84,10 +92,11 @@ func (d *Dispatcher) HandleQueued(ctx context.Context, event *JobEvent) error {
 
 	// Provision the cloud instance.
 	runner, err := prov.CreateRunner(ctx, provider.RunnerOpts{
-		Name:      name,
-		Pool:      pool.Name,
-		Labels:    pool.Labels,
-		JITConfig: jit.EncodedJITConfig,
+		Name:          name,
+		Pool:          pool.Name,
+		Labels:        pool.Labels,
+		JITConfig:     jit.EncodedJITConfig,
+		RegistryToken: registryToken,
 	})
 	if err != nil {
 		// Best-effort: remove the GitHub runner registration since we failed to provision.
