@@ -14,7 +14,7 @@ pools:
       project: my-project
       zone: us-central1-a
       machine_type: e2-standard-4
-      # runner_image defaults to ghcr.io/actions/actions-runner:latest
+      # runner_image defaults to ghcr.io/actions/actions-runner:latest (multi-arch).
       # Override with your own image for additional tools:
       # runner_image: ghcr.io/my-org/actions-runner:latest
       spot: true
@@ -22,3 +22,17 @@ pools:
       # network: projects/my-project/global/networks/my-vpc
       # subnet: projects/my-project/regions/us-central1/subnetworks/my-subnet
       # service_account: runner@my-project.iam.gserviceaccount.com
+
+  # ARM64 pool — uses t2a machine types which auto-select COS ARM64 image.
+  # The default runner_image is multi-arch, so it works on both x64 and ARM.
+  # - name: arm
+  #   labels: [self-hosted, linux, arm64]
+  #   provider: gcp
+  #   max_runners: 5
+  #   idle_runners: 0
+  #   gcp:
+  #     project: my-project
+  #     zone: us-central1-a
+  #     machine_type: t2a-standard-4
+  #     spot: true
+  #     disk_size_gb: 50

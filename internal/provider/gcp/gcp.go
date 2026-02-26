@@ -19,12 +19,13 @@ const (
 	computeBasePath = "https://compute.googleapis.com/compute/v1"
 	computeScope    = "https://www.googleapis.com/auth/compute"
 
-	// Container-Optimized OS image. GCE resolves family to the latest stable.
-	cosImageURL = "projects/cos-cloud/global/images/family/cos-stable"
+	// COS image families per architecture.
+	cosImageX64   = "projects/cos-cloud/global/images/family/cos-stable"
+	cosImageARM64 = "projects/cos-cloud/global/images/family/cos-arm64-stable"
 
 	// DefaultRunnerImage is the official GitHub Actions runner Docker image.
-	// It's minimal (runner binary + Docker on Debian). Users should extend it
-	// or provide their own image with additional tools their workflows need.
+	// It's a multi-arch image (amd64 + arm64), so Docker pulls the right
+	// variant for the VM's architecture automatically.
 	DefaultRunnerImage = "ghcr.io/actions/actions-runner:latest"
 
 	// Labels applied to all managed instances for filtering.
@@ -37,8 +38,9 @@ const (
 // Provider implements provider.Provider for Google Cloud Compute Engine.
 // It creates COS VMs that pull and run the user's Docker image.
 type Provider struct {
-	cfg    *config.GCPConfig
-	client *http.Client
+	cfg      *config.GCPConfig
+	client   *http.Client
+	cosImage string // resolved COS image URL for the machine type's architecture
 }
 
 func New(ctx context.Context, cfg *config.GCPConfig) (*Provider, error) {
@@ -52,7 +54,7 @@ func New(ctx context.Context, cfg *config.GCPConfig) (*Provider, error) {
 		return nil, fmt.Errorf("creating authenticated client: %w", err)
 	}
 
-	return &Provider{cfg: cfg, client: client}, nil
+	return &Provider{cfg: cfg, client: client, cosImage: cosImageForMachineType(cfg.MachineType)}, nil
 }
 
 // NewWithClient creates a Provider with a caller-supplied HTTP client (for testing).
@@ -61,13 +63,29 @@ func NewWithClient(cfg *config.GCPConfig, client *http.Client) (*Provider, error
 		return nil, fmt.Errorf("gcp config is required")
 	}
 	applyDefaults(cfg)
-	return &Provider{cfg: cfg, client: client}, nil
+	return &Provider{cfg: cfg, client: client, cosImage: cosImageForMachineType(cfg.MachineType)}, nil
 }
 
 func applyDefaults(cfg *config.GCPConfig) {
 	if cfg.RunnerImage == "" {
 		cfg.RunnerImage = DefaultRunnerImage
 	}
+}
+
+// cosImageForMachineType returns the appropriate COS image for the given
+// GCE machine type. ARM64 machine types (t2a-*) use the ARM COS image;
+// all others use the x64 image.
+func cosImageForMachineType(machineType string) string {
+	if isARM64MachineType(machineType) {
+		return cosImageARM64
+	}
+	return cosImageX64
+}
+
+// isARM64MachineType returns true if the GCE machine type runs on ARM64.
+// Currently only the Tau T2A family (t2a-*) is ARM-based.
+func isARM64MachineType(machineType string) bool {
+	return strings.HasPrefix(machineType, "t2a-")
 }
 
 func (p *Provider) CreateRunner(ctx context.Context, opts provider.RunnerOpts) (provider.Runner, error) {
@@ -83,7 +101,7 @@ func (p *Provider) CreateRunner(ctx context.Context, opts provider.RunnerOpts) (
 			{
 				InitializeParams: &gceDiskInitParams{
 					DiskSizeGb:  diskSizeGB,
-					SourceImage: cosImageURL,
+					SourceImage: p.cosImage,
 				},
 				AutoDelete: true,
 				Boot:       true,
