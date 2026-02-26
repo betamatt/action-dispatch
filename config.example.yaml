@@ -1,0 +1,18 @@
+github:
+  app_id: 12345
+  private_key_path: /etc/action-dispatch/app.pem
+  webhook_secret: change-me
+
+pools:
+  - name: default
+    labels: [self-hosted, linux, x64]
+    provider: gcp
+    max_runners: 10
+    idle_runners: 0
+    gcp:
+      project: my-project
+      zone: us-central1-a
+      machine_type: e2-standard-4
+      image: projects/my-project/global/images/runner-v1
+      spot: true
+      disk_size_gb: 50
