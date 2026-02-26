@@ -36,7 +36,8 @@ func main() {
 	}
 
 	// Build providers from pool configs.
-	providers, err := buildProviders(cfg)
+	ctx := context.Background()
+	providers, err := buildProviders(ctx, cfg)
 	if err != nil {
 		logger.Error("failed to build providers", "error", err)
 		os.Exit(1)
@@ -90,7 +91,7 @@ func main() {
 	}
 }
 
-func buildProviders(cfg *config.Config) (map[string]provider.Provider, error) {
+func buildProviders(ctx context.Context, cfg *config.Config) (map[string]provider.Provider, error) {
 	providers := make(map[string]provider.Provider)
 
 	for _, pool := range cfg.Pools {
@@ -100,7 +101,7 @@ func buildProviders(cfg *config.Config) (map[string]provider.Provider, error) {
 
 		switch pool.Provider {
 		case "gcp":
-			p, err := gcp.New(pool.GCP)
+			p, err := gcp.New(ctx, pool.GCP)
 			if err != nil {
 				return nil, fmt.Errorf("building gcp provider for pool %q: %w", pool.Name, err)
 			}
