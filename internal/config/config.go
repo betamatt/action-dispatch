@@ -30,12 +30,18 @@ type Pool struct {
 }
 
 type GCPConfig struct {
-	Project     string `yaml:"project"`
-	Zone        string `yaml:"zone"`
-	MachineType string `yaml:"machine_type"`
-	Image       string `yaml:"image"`
-	Spot        bool   `yaml:"spot"`
-	DiskSizeGB  int    `yaml:"disk_size_gb"`
+	Project        string `yaml:"project"`
+	Zone           string `yaml:"zone"`
+	MachineType    string `yaml:"machine_type"`
+	DiskSizeGB     int    `yaml:"disk_size_gb"`
+	Spot           bool   `yaml:"spot"`
+	Network        string `yaml:"network"`
+	Subnet         string `yaml:"subnet"`
+	ServiceAccount string `yaml:"service_account"`
+
+	// RunnerImage is the Docker image that contains the GitHub Actions runner.
+	// The VM boots Container-Optimized OS and runs this image.
+	RunnerImage string `yaml:"runner_image"`
 }
 
 func Load(path string) (*Config, error) {
