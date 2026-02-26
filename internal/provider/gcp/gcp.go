@@ -22,6 +22,11 @@ const (
 	// Container-Optimized OS image. GCE resolves family to the latest stable.
 	cosImageURL = "projects/cos-cloud/global/images/family/cos-stable"
 
+	// DefaultRunnerImage is the official GitHub Actions runner Docker image.
+	// It's minimal (runner binary + Docker on Debian). Users should extend it
+	// or provide their own image with additional tools their workflows need.
+	DefaultRunnerImage = "ghcr.io/actions/actions-runner:latest"
+
 	// Labels applied to all managed instances for filtering.
 	managedByLabel = "managed-by"
 	managedByValue = "action-dispatch"
@@ -40,9 +45,7 @@ func New(ctx context.Context, cfg *config.GCPConfig) (*Provider, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("gcp config is required")
 	}
-	if cfg.RunnerImage == "" {
-		return nil, fmt.Errorf("gcp.runner_image is required")
-	}
+	applyDefaults(cfg)
 
 	client, err := google.DefaultClient(ctx, computeScope)
 	if err != nil {
@@ -57,10 +60,14 @@ func NewWithClient(cfg *config.GCPConfig, client *http.Client) (*Provider, error
 	if cfg == nil {
 		return nil, fmt.Errorf("gcp config is required")
 	}
-	if cfg.RunnerImage == "" {
-		return nil, fmt.Errorf("gcp.runner_image is required")
-	}
+	applyDefaults(cfg)
 	return &Provider{cfg: cfg, client: client}, nil
+}
+
+func applyDefaults(cfg *config.GCPConfig) {
+	if cfg.RunnerImage == "" {
+		cfg.RunnerImage = DefaultRunnerImage
+	}
 }
 
 func (p *Provider) CreateRunner(ctx context.Context, opts provider.RunnerOpts) (provider.Runner, error) {
